@@ -1,9 +1,18 @@
 from flask import Flask, url_for, request, render_template,\
-    make_response, abort, redirect
+    make_response, abort, redirect, escape, session
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
+app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
 
+app.logger.info('A value for INFO')
+app.logger.debug('A value for DEBUG')
+app.logger.warn('A value for WARN')
+app.logger.error('A value for ERROR')
+
+'''生成随机密钥'''
+import os
+secrets_key = os.urandom(24)
 
 @app.route('/')
 def hello_world():
@@ -24,12 +33,28 @@ def page_not_found(error):
 #         error = 'Invalid username/password'
 #     return render_template('login.html', error=error)
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        session['username'] = request.form['username']
+        return redirect(url_for('index'))
+    return '''
+        <form action="" method="post">
+            <p><input type=text name=username>
+            <p><input type=submit value=Login>
+        </form>
+    '''
+
+@app.route('/logout')
+def logout():
+    session.pop('username', None)
+    return redirect(url_for('index'))
+
 @app.route('/index')
 def index():
-    resp = make_response(render_template('login.html'))
-    resp.set_cookie('username', 'the_username')
-    username = request.cookies.get('username')
-    return username
+    if 'username' in session:
+        return 'Logged in as {0}'.format(escape(session['username']))
+    return 'You are not logged in'
 
 @app.route('/user/<username>')
 def show_user_profile(username):
@@ -52,6 +77,16 @@ def about():
 @app.route('/hello/<name>')
 def hello(name=None):
     return render_template('hello.html', name=name)
+
+@app.errorhandler(404)
+def not_found(error):
+    return render_template('error.html'), 404
+
+@app.errorhandler(404)
+def not_founds(error):
+    resp = make_response(render_template('error.html'), 404)
+    resp.headers['X-Something'] = 'A value'
+    return resp
 
 # @app.route('/upload', methods=['GET', 'POST'])
 # def upload_file():
