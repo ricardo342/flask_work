@@ -92,7 +92,7 @@ def utility_processor():
     return dict(format_price=format_price)
 
 '''与上下文一起（with context）导入宏'''
-{% from '_helpers.html' import my_macro with context %}
+# {% from '_helpers.html' import my_macro with context %}
 
 if __name__ == '__main__':
     app.run()
