@@ -73,6 +73,24 @@ def logout():
     flash('You were logged out')
     return redirect(url_for('show_entries'))
 
+# @app.template_filter('reverse')
+# def reverse_filter(s):
+#     return s[::1]
+
+def reverse_filter(s):
+    return s[::1]
+app.jinja_env.filters['reverse'] = reverse_filter
+
+@app.context_processor
+def inject_user():
+    return dict(user=g.user)
+
+@app.context_processor
+def utility_processor():
+    def format_price(amount, currency=u'€'):
+        return u'{0:.2f}{1}'.format(amount, currency)
+    return dict(format_price=format_price)
+
 '''与上下文一起（with context）导入宏'''
 {% from '_helpers.html' import my_macro with context %}
 
