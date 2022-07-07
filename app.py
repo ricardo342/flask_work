@@ -1,111 +1,95 @@
-from flask import Flask, url_for, request, render_template,\
-    make_response, abort, redirect, escape, session
-from werkzeug.utils import secure_filename
+# -*- coding:utf-8 -*-
+#!/usr/bin/python3
+'''
+@File: flaskr
+@time:2022/6/23
+@Author:majiaqin 170479
+@Desc:Flask 应用设置代码
+'''
+
+import os
+import sqlite3
+from flask import Flask,request, session, g, redirect, url_for, abort, \
+    render_template, flash, make_response
 
 app = Flask(__name__)
-app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RT'
+app.config.from_envvar('FLASKR_SETTINGS', silent=True)
+app.secret_key = 'fkdjsafjdkfdlkjfadskjfadskljdsfklj'
 
-app.logger.info('A value for INFO')
-app.logger.debug('A value for DEBUG')
-app.logger.warn('A value for WARN')
-app.logger.error('A value for ERROR')
+@app.route('/hello/<name>')
+def hello_name(name):
+    return 'hello {0}'.format(name)
 
-'''生成随机密钥'''
-import os
-secrets_key = os.urandom(24)
+@app.route('/blog/<int:postID>')
+def show_blog(postID):
+    return 'Blog Number {0}'.format(postID)
+
+@app.route('/rev/<float:revNo>')
+def revision(revNo):
+    return 'Revision Number {0}'.format(revNo)
+
+def hello_user(name):
+    if name == 'admin':
+        return redirect(url_for('hello_name'))
+    else:
+        return redirect(url_for('show_blog'))
 
 @app.route('/')
-def hello_world():
-    return redirect(url_for('index'))
+def index():
+    if 'username' in session:
+        username = session['username']
+        return '登录用户名是:' + username + '<br>' + \
+"<b><a href = '/logout'>点击这里注销</a></b>"
 
-@app.errorhandler(404)
-def page_not_found(error):
-    return render_template('page_not_found.html'), 404
+    return "您暂未登录， <br><a href = '/login'></b>" + \
+"点击这里登录</b></a>"
 
-# @app.route('/login', methods=['GET', 'POST'])
-# def login():
-#     error = None
-#     if request.method == 'POST':
-#         if valid_login(request.form['username'],
-#                        request.form['password']):
-#             return log_the_user_in(request.form['username'])
-#     else:
-#         error = 'Invalid username/password'
-#     return render_template('login.html', error=error)
+@app.route('/success/<name>')
+def success(name):
+    return 'welcome {0}'.format(name)
 
-@app.route('/login', methods=['GET', 'POST'])
+@app.route('/login', methods=['POST', 'GET'])
 def login():
+    error = None
     if request.method == 'POST':
-        session['username'] = request.form['username']
-        return redirect(url_for('index'))
-    return '''
-        <form action="" method="post">
-            <p><input type=text name=username>
-            <p><input type=submit value=Login>
-        </form>
-    '''
+        if request.form['username'] != 'admin' or request.form['password'] != 'admin':
+            error = 'Invalid username or password. Please try again!'
+        else:
+            flash('You were successfully logged in')
+            return redirect(url_for('index'))
+    return render_template('login.html', error=error)
 
 @app.route('/logout')
 def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
 
-@app.route('/index')
-def index():
-    if 'username' in session:
-        return 'Logged in as {0}'.format(escape(session['username']))
-    return 'You are not logged in'
+@app.route('/student')
+def student():
+    return render_template('student.html')
 
-@app.route('/user/<username>')
-def show_user_profile(username):
-    return 'User {0}'.format(username)
+@app.route('/result')
+def result():
+    if request.method == 'POST':
+        result = request.form
+        return render_template('result.html', result=result)
 
-'''有三种转换器int&float&path'''
-@app.route('/post/<int:post_id>')
-def show_post(post_id):
-    return 'Post {0}'.format(post_id)
-
-@app.route('/projects/')
-def projects():
-    return 'The project page'
-
-@app.route('/about')
-def about():
-    return 'The about page'
-
-@app.route('/hello/')
-@app.route('/hello/<name>')
-def hello(name=None):
-    return render_template('hello.html', name=name)
-
-@app.errorhandler(404)
-def not_found(error):
-    return render_template('error.html'), 404
-
-@app.errorhandler(404)
-def not_founds(error):
-    resp = make_response(render_template('error.html'), 404)
-    resp.headers['X-Something'] = 'A value'
+@app.route('/set_cookies')
+def set_cookie():
+    resp = make_response("success")
+    resp.set_cookie("w3cschool", "w3cschool", max_age=3600)
     return resp
 
-# @app.route('/upload', methods=['GET', 'POST'])
-# def upload_file():
-#     if request.method == 'POST':
-#         f = request.files['the file']
-#         f.save('/var/www/uploads/'+secure_filename(f.filename))
+@app.route('/get_cookies')
+def get_cookie():
+    cookie_1 = request.cookies.get("w3cschool")
+    return cookie_1
 
-with app.test_request_context():
-    print(url_for('index'))
-    print(url_for('show_user_profile', username='majiaqin'))
-    print(url_for('show_post', post_id=666))
-    print(url_for('projects', next='sss'))
-    print(url_for('about', next='/'))
-    print(url_for('static', filename='style.css'))
-
-with app.test_request_context('/hello', method='POST'):
-    assert request.path == '/hello'
-    assert request.method == 'POST'
-
+@app.route('/delete_cookies')
+def delete_cookie():
+    resp = make_response('del success')
+    resp.delete_cookie("w3cschool")
+    return resp
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', debug=True)

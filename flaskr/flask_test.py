@@ -8,7 +8,7 @@
 '''
 
 import os
-from flaskr import flaskr
+import flaskr
 import unittest
 import tempfile
 
