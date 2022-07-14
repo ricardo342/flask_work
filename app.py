@@ -7,89 +7,47 @@
 @Desc:Flask 应用设置代码
 '''
 
-import os
-import sqlite3
-from flask import Flask,request, session, g, redirect, url_for, abort, \
-    render_template, flash, make_response
+from flask import Flask, request, flash, url_for, redirect, render_template
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config.from_envvar('FLASKR_SETTINGS', silent=True)
-app.secret_key = 'fkdjsafjdkfdlkjfadskjfadskljdsfklj'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///students.sqlite3'
+app.config['SECRET_KEY'] = "random string"
 
-@app.route('/hello/<name>')
-def hello_name(name):
-    return 'hello {0}'.format(name)
+db = SQLAlchemy(app)
 
-@app.route('/blog/<int:postID>')
-def show_blog(postID):
-    return 'Blog Number {0}'.format(postID)
+class students(db.Model):
+    id = db.Column('student_id', db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    city = db.Column(db.String(50))
+    addr = db.Column(db.String(200))
+    pin = db.Column(db.String(10))
 
-@app.route('/rev/<float:revNo>')
-def revision(revNo):
-    return 'Revision Number {0}'.format(revNo)
-
-def hello_user(name):
-    if name == 'admin':
-        return redirect(url_for('hello_name'))
-    else:
-        return redirect(url_for('show_blog'))
+    def __init__(self, name, city, addr, pin):
+        self.name = name
+        self.city = city
+        self.addr = addr
+        self.pin = pin
 
 @app.route('/')
-def index():
-    if 'username' in session:
-        username = session['username']
-        return '登录用户名是:' + username + '<br>' + \
-"<b><a href = '/logout'>点击这里注销</a></b>"
+def show_all():
+    return render_template('show_all.html', students=students.query.all())
 
-    return "您暂未登录， <br><a href = '/login'></b>" + \
-"点击这里登录</b></a>"
-
-@app.route('/success/<name>')
-def success(name):
-    return 'welcome {0}'.format(name)
-
-@app.route('/login', methods=['POST', 'GET'])
-def login():
-    error = None
+@app.route('/new', methods=['GET', 'POST'])
+def new():
     if request.method == 'POST':
-        if request.form['username'] != 'admin' or request.form['password'] != 'admin':
-            error = 'Invalid username or password. Please try again!'
+        if not request.form['name'] or not request.form['city'] or not request.form['addr']:
+            flash('Please enter all the fields', 'error')
         else:
-            flash('You were successfully logged in')
-            return redirect(url_for('index'))
-    return render_template('login.html', error=error)
+            student = students(request.form['name'], request.form['city'],
+                               request.form['addr'], request.form['pin'])
 
-@app.route('/logout')
-def logout():
-    session.pop('username', None)
-    return redirect(url_for('index'))
-
-@app.route('/student')
-def student():
-    return render_template('student.html')
-
-@app.route('/result')
-def result():
-    if request.method == 'POST':
-        result = request.form
-        return render_template('result.html', result=result)
-
-@app.route('/set_cookies')
-def set_cookie():
-    resp = make_response("success")
-    resp.set_cookie("w3cschool", "w3cschool", max_age=3600)
-    return resp
-
-@app.route('/get_cookies')
-def get_cookie():
-    cookie_1 = request.cookies.get("w3cschool")
-    return cookie_1
-
-@app.route('/delete_cookies')
-def delete_cookie():
-    resp = make_response('del success')
-    resp.delete_cookie("w3cschool")
-    return resp
+            db.session.add(student)
+            db.session.commit()
+            flash('Record was successfully added')
+            return redirect(url_for('show_all'))
+    return render_template('new.html')
 
 if __name__ == '__main__':
+    db.create_all()
     app.run(host='0.0.0.0', debug=True)
